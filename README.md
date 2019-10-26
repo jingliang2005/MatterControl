@@ -8,13 +8,12 @@ MatterControl
 
 [MatterControl](http://www.mattercontrol.com/) is an open-source program designed to control and enhance the desktop 3D printing experience. It's designed to help you get the most out of your 3D printer - making it easy to track, preview, and print your 3D parts. Development of MatterControl is sponsored by [MatterHackers](http://www.matterhackers.com/) and it's partners.
 
-![Screenshot](http://www.mattercontrol.com/static/mattercontrol/screenshot_slice.png)
+![Screenshot](https://user-images.githubusercontent.com/3131268/43025866-3af2d478-8c28-11e8-88c8-5a8768dbd64f.png)
 
 Features
 --------
-* Integrated slicing engine [MatterSlice](https://github.com/MatterHackers/MatterSlice), as well as the ability to use Slic3r or Cura.
-* Designed to be driven and extended by the 3D printing community using a powerful [plugin architecture](http://wiki.mattercontrol.com/Developing_Plugins).
-* [Library](http://wiki.mattercontrol.com/Library) for managing your STL files, with a plugin for cloud synchronization.
+* Integrated slicing engine [MatterSlice](https://github.com/MatterHackers/MatterSlice)
+* [Library](http://wiki.mattercontrol.com/Library) for managing your STL files
 * Built in profiles for [a plethora of different printers](http://www.mattercontrol.com/#jumpSupportedModels).
 * Built in [editing tools](http://wiki.mattercontrol.com/3D_View/Edit) along with [plugins for creating](http://wiki.mattercontrol.com/Category:Design_Tools) text, images, and braille.
 * [Queue](http://wiki.mattercontrol.com/Queue) of items you are going to print, and [history](http://wiki.mattercontrol.com/History) of items you have printed.

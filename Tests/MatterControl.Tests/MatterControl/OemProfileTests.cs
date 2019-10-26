@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using MatterHackers.Agg;
-using MatterHackers.Agg.PlatformAbstract;
+using MatterHackers.Agg.Platform;
 using MatterHackers.MatterControl.SlicerConfiguration;
 using MatterHackers.MatterControl.Tests.Automation;
 using NUnit.Framework;
@@ -13,16 +13,16 @@ namespace MatterControl.Tests.MatterControl
 	[TestFixture, Category("OemProfiles")]
 	public class OemProfileTests
 	{
-		private static List<PrinterConfig> allPrinters;
+		private static List<PrinterTestDetails> allPrinters;
 		private static string printerSettingsDirectory = TestContext.CurrentContext.ResolveProjectPath(4, "StaticData", "Profiles");
 
 		static OemProfileTests()
 		{
-			StaticData.Instance = new FileSystemStaticData(TestContext.CurrentContext.ResolveProjectPath(4, "StaticData"));
+			AggContext.StaticData = new FileSystemStaticData(TestContext.CurrentContext.ResolveProjectPath(4, "StaticData"));
 			MatterControlUtilities.OverrideAppDataLocation(TestContext.CurrentContext.ResolveProjectPath(4));
 
 			allPrinters = (from printerFile in new DirectoryInfo(printerSettingsDirectory).GetFiles("*.printer", SearchOption.AllDirectories)
-						   select new PrinterConfig
+						   select new PrinterTestDetails
 						   {
 							   PrinterName = printerFile.Name,
 							   Oem = printerFile.Directory.Name,
@@ -80,7 +80,7 @@ namespace MatterControl.Tests.MatterControl
 				// Only validate start_gcode configs that have M109 and extrude statements
 				if (startGcode.Contains("M109") && startGcode.Contains("G1 E"))
 				{
-					// Split start_gcode on newlines 
+					// Split start_gcode on newlines
 					var lines = startGcode.Split(new string[] { "\\n" }, StringSplitOptions.RemoveEmptyEntries).Select(l => l.ToUpper().Trim()).ToList();
 
 					// Find first instance of M109 or 'G1 E' extrude
@@ -159,7 +159,7 @@ namespace MatterControl.Tests.MatterControl
 		{
 			ValidateOnAllPrinters((printer, settings) =>
 			{
-				string retractLengthString = settings.GetValue("retract_length");
+				string retractLengthString = settings.GetValue(SettingsKey.retract_length);
 				if (!string.IsNullOrEmpty(retractLengthString))
 				{
 					float retractLength;
@@ -198,7 +198,7 @@ namespace MatterControl.Tests.MatterControl
 		{
 			ValidateOnAllPrinters((printer, settings) =>
 			{
-				string fanSpeedString = settings.GetValue("min_fan_speed");
+				string fanSpeedString = settings.GetValue(SettingsKey.min_fan_speed);
 				if (!string.IsNullOrEmpty(fanSpeedString))
 				{
 					// Must be valid int data
@@ -246,7 +246,7 @@ namespace MatterControl.Tests.MatterControl
 		{
 			ValidateOnAllPrinters((printer, settings) =>
 			{
-				string fanSpeedString = settings.GetValue("max_fan_speed");
+				string fanSpeedString = settings.GetValue(SettingsKey.max_fan_speed);
 				if (!string.IsNullOrEmpty(fanSpeedString))
 				{
 					// Must be valid int data
@@ -268,7 +268,7 @@ namespace MatterControl.Tests.MatterControl
 			ValidateOnAllPrinters((printer, settings) =>
 			{
 				// TODO: Why aren't we testing all gcode sections?
-				string[] keysToTest = { "start_gcode", "end_gcode" };
+				string[] keysToTest = { SettingsKey.start_gcode, SettingsKey.end_gcode };
 				foreach (string gcodeKey in keysToTest)
 				{
 					string gcode = settings.GetValue(gcodeKey);
@@ -285,7 +285,7 @@ namespace MatterControl.Tests.MatterControl
 		{
 			ValidateOnAllPrinters((printer, settings) =>
 			{
-				string bottomSolidLayers = settings.GetValue("bottom_solid_layers");
+				string bottomSolidLayers = settings.GetValue(SettingsKey.bottom_solid_layers);
 				if (!string.IsNullOrEmpty(bottomSolidLayers))
 				{
 					if (bottomSolidLayers == "0")
@@ -304,8 +304,8 @@ namespace MatterControl.Tests.MatterControl
 		{
 			ValidateOnAllPrinters((printer, settings) =>
 			{
-				string startGcode = settings.GetValue("start_gcode");
-				Assert.False(startGcode.Contains("first_layer_bed_temperature"), "[start_gcode] should not contain [first_layer_bed_temperature]" + printer.RelativeFilePath);
+				string startGcode = settings.GetValue(SettingsKey.start_gcode);
+				Assert.False(startGcode.Contains(SettingsKey.first_layer_bed_temperature), "[start_gcode] should not contain [first_layer_bed_temperature]" + printer.RelativeFilePath);
 			});
 		}
 
@@ -314,7 +314,7 @@ namespace MatterControl.Tests.MatterControl
 		{
 			ValidateOnAllPrinters((printer, settings) =>
 			{
-				if (settings.GetValue("output_only_first_layer") == "1")
+				if (settings.GetValue(SettingsKey.output_only_first_layer) == "1")
 				{
 					return;
 				}
@@ -351,7 +351,7 @@ namespace MatterControl.Tests.MatterControl
 
 					Assert.Less(firstLayerHeight, maximumLayerHeight, "[first_layer_height] must be less than [firstLayerExtrusionWidth]: " + printer.RelativeFilePath);
 				}
-				
+
 			});
 		}
 
@@ -360,7 +360,7 @@ namespace MatterControl.Tests.MatterControl
 		{
 			ValidateOnAllPrinters((printer, settings) =>
 			{
-				if (settings.GetValue("output_only_first_layer") == "1")
+				if (settings.GetValue(SettingsKey.output_only_first_layer) == "1")
 				{
 					return;
 				}
@@ -408,7 +408,7 @@ namespace MatterControl.Tests.MatterControl
 		{
 			ValidateOnAllPrinters((printer, settings) =>
 			{
-				string supportMaterialExtruder = settings.GetValue("support_material_extruder");
+				string supportMaterialExtruder = settings.GetValue(SettingsKey.support_material_extruder);
 				if (!string.IsNullOrEmpty(supportMaterialExtruder) && printer.Oem != "Esagono")
 				{
 					Assert.AreEqual("1", supportMaterialExtruder, "[support_material_extruder] must be assigned to extruder 1: " + printer.RelativeFilePath);
@@ -449,11 +449,11 @@ namespace MatterControl.Tests.MatterControl
 		}
 
 		/// <summary>
-		/// Calls the given delegate for each printer as well as each quality/material layer, passing in a PrinterConfig object that has 
+		/// Calls the given delegate for each printer as well as each quality/material layer, passing in a PrinterConfig object that has
 		/// printer settings loaded into a SettingsLayer as well as state about the printer
 		/// </summary>
 		/// <param name="action">The action to invoke for each printer</param>
-		private void ValidateOnAllPrinters(Action<PrinterConfig, PrinterSettings> action)
+		private void ValidateOnAllPrinters(Action<PrinterTestDetails, PrinterSettings> action)
 		{
 			var ruleViolations = new List<string>();
 
@@ -465,7 +465,7 @@ namespace MatterControl.Tests.MatterControl
 				printerSettings.AutoSave = false;
 
 				// Disable active material/quality overrides
-				printerSettings.SetMaterialPreset(0, "");
+				printerSettings.ActiveMaterialKey = "";
 				printerSettings.ActiveQualityKey = "";
 
 				// Validate just the OemLayer
@@ -481,7 +481,7 @@ namespace MatterControl.Tests.MatterControl
 				{
 					printer.RuleViolated = false;
 
-					printerSettings.SetMaterialPreset(0, layer.LayerID);
+					printerSettings.ActiveMaterialKey = layer.LayerID;
 
 					// Validate the settings with this material layer active
 					action(printer, printerSettings);
@@ -492,7 +492,7 @@ namespace MatterControl.Tests.MatterControl
 					}
 				}
 
-				printerSettings.SetMaterialPreset(0, "");
+				printerSettings.ActiveMaterialKey = "";
 
 				// Validate quality layers
 				foreach (var layer in printer.PrinterSettings.QualityLayers)
@@ -516,7 +516,7 @@ namespace MatterControl.Tests.MatterControl
 				string.Format("One or more printers violate this rule: \r\n\r\n{0}\r\n", string.Join("\r\n", ruleViolations.ToArray())));
 		}
 
-		private class PrinterConfig
+		private class PrinterTestDetails
 		{
 			public string PrinterName { get; set; }
 			public string Oem { get; set; }
@@ -524,8 +524,8 @@ namespace MatterControl.Tests.MatterControl
 			public string RelativeFilePath { get; set; }
 			public PrinterSettings PrinterSettings { get; set; }
 
-			// HACK: short term hack to support a general purpose test rollup function for cases where multiple config files 
-			// violate a rule and in the short term we want to report and resolve the issues in batch rather than having a 
+			// HACK: short term hack to support a general purpose test rollup function for cases where multiple config files
+			// violate a rule and in the short term we want to report and resolve the issues in batch rather than having a
 			// single test failure. Long term the single test failure better communicates the issue and assist with troubleshooting
 			// by using  .AreEqual .LessOrEqual, etc. to communicate intent
 			public bool RuleViolated { get; set; } = false;

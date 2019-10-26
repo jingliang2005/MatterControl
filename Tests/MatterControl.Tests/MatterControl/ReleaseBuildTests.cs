@@ -1,8 +1,4 @@
-﻿using MatterHackers.Agg.PlatformAbstract;
-using MatterHackers.Agg.UI.Tests;
-using MatterHackers.GuiAutomation;
-using MatterHackers.MatterControl;
-#if !__ANDROID__
+﻿#if !__ANDROID__
 using MatterHackers.MatterControl.Tests.Automation;
 #endif
 using NUnit.Framework;
@@ -12,14 +8,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Xml.Linq;
 using System.Threading.Tasks;
 using System.Threading;
+using MatterHackers.MatterControl;
 
 namespace MatterControl.Tests
 {
-	[TestFixture]
+	[TestFixture, Apartment(ApartmentState.STA), RunInApplicationDomain]
 	public class ReleaseBuildTests
 	{
 		private static Type debuggableAttribute = typeof(DebuggableAttribute);
@@ -28,7 +24,7 @@ namespace MatterControl.Tests
 		public void MatterControlAssemblyIsOptimized()
 		{
 #if (!DEBUG)
-            IsAssemblyOptimized(Assembly.Load("MatterControl, Culture=neutral, PublicKeyToken=null"));
+            IsAssemblyOptimized(Assembly.Load("MatterControlLib, Culture=neutral, PublicKeyToken=null"));
 #endif
 		}
 
@@ -41,31 +37,23 @@ namespace MatterControl.Tests
 			string configuration = "Release";
 #endif
 
+			//MatterHackers.RenderOpenGl.dll
+
 			// This list can be refreshed via the rebuildDependencies() helper function below
-			string knownAssemblies = @"MatterHackers.VectorMath.dll
-						AGG.dll
-						PlatfromAbstract.dll
-						MatterHackers.PolygonMesh.dll
-						MatterHackers.Csg.dll
-						clipper_library.dll
-						MatterHackers.Agg.UI.dll
+			string knownAssemblies = @"VectorMath.dll
+						Agg.dll
+						PolygonMesh.dll
+						agg_clipper_library.dll
+						Gui.dll
 						Tesselate.dll
-						MatterHackers.DataConverters2D.dll
-						MatterHackers.RenderOpenGl.dll
+						DataConverters2D.dll
 						RayTracer.dll
-						MatterHackers.DataConverters3D.dll
-						MatterHackers.Localizations.dll
-						MatterHackers.OpenGL.UI.dll
-						agg_platform_win32.dll
-						WindowsFileDialogs.dll
+						DataConverters3D.dll
+						Localizations.dll
 						Community.CsharpSqlite.dll
-						MatterHackers.SerialPortCommunication.dll
-						MatterHackers.MatterControl.Plugins.dll
 						MatterHackers.Agg.ImageProcessing.dll
 						MatterHackers.MarchingSquares.dll
-						GuiAutomation.dll
-						BrailBuilder.dll
-						TextCreator.dll";
+						GuiAutomation.dll";
 
 			foreach (string assemblyName in knownAssemblies.Split('\n').Select(s => s.Trim()))
 			{
@@ -103,21 +91,17 @@ namespace MatterControl.Tests
 		}
 
 #if !__ANDROID__
-		[Test, Apartment(ApartmentState.STA), RunInApplicationDomain]
+		[Test]
 		public async Task MatterControlRuns()
 		{
-			AutomationTest testToRun = (testRunner) =>
+			await MatterControlUtilities.RunTest((testRunner) =>
 			{
-				testRunner.CloseSignInAndPrinterSelect();
+				testRunner.WaitForName("PartPreviewContent");
 
-				Assert.IsTrue(testRunner.NameExists("SettingsAndControls"));
+				Assert.IsTrue(testRunner.NameExists("PartPreviewContent"));
 
-				testRunner.ClickByName("Library Tab");
-
-				return Task.FromResult(0);
-			};
-
-			await MatterControlUtilities.RunTest(testToRun, maxTimeToRun: 90);
+				return Task.CompletedTask;
+			});
 		}
 #endif
 
@@ -125,20 +109,20 @@ namespace MatterControl.Tests
 		public void MatterControlDependenciesAreOptimized()
 		{
 #if (!DEBUG)
-            var matterControl = Assembly.Load("MatterControl, Culture=neutral, PublicKeyToken=null");
+			var matterControl = Assembly.Load("MatterControlLib, Culture=neutral, PublicKeyToken=null");
 
-            // Loop over all referenced assemblies to verify they are optimized and lack (symbols and Debug compile flag)
-            foreach(var assemblyName in matterControl.GetReferencedAssemblies())
-            {
-                var assembly = Assembly.Load(assemblyName.FullName);
-                var firstNamespace = assembly.GetTypes().First().Namespace;
+			// Loop over all referenced assemblies to verify they are optimized and lack (symbols and Debug compile flag)
+			foreach (var assemblyName in matterControl.GetReferencedAssemblies())
+			{
+				var assembly = Assembly.Load(assemblyName.FullName);
+				var firstNamespace = assembly?.GetTypes()?.FirstOrDefault()?.Namespace;
 
-                // Only validate our assemblies
+				// Only validate our assemblies
 				if (firstNamespace != null && (firstNamespace.Contains("MatterHackers") || firstNamespace.Contains("MatterControl")))
-                {
-                    IsAssemblyOptimized(assembly);
-                }
-            }
+				{
+					IsAssemblyOptimized(assembly);
+				}
+			}
 #endif
 		}
 
@@ -146,7 +130,7 @@ namespace MatterControl.Tests
 		public void ClassicDebugComplicationFlagTests()
 		{
 #if (!DEBUG)
-            MatterControlApplication.CheckKnownAssemblyConditionalCompSymbols();
+            BuildValidationTests.CheckKnownAssemblyConditionalCompSymbols();
 #endif
 		}
 
@@ -162,7 +146,7 @@ namespace MatterControl.Tests
 
 			var debuggable = matchedAttributes.First() as DebuggableAttribute;
 			Assert.IsFalse(debuggable.IsJITOptimizerDisabled, "Referenced assembly is not optimized: " + assemblyName.Name);
-			Assert.IsFalse(debuggable.IsJITTrackingEnabled, "Referenced assembly is has symbols: " + assemblyName.Name);
+			Assert.IsFalse(debuggable.IsJITTrackingEnabled, "Referenced assembly has symbols: " + assemblyName.Name);
 			Console.WriteLine("Assembly is optimized: " + assemblyName.Name);
 		}
 	}

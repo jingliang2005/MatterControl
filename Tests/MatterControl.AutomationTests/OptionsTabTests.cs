@@ -1,43 +1,31 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using MatterHackers.Agg.UI;
-using MatterHackers.Agg.UI.Tests;
-using MatterHackers.GuiAutomation;
 using NUnit.Framework;
 
 namespace MatterHackers.MatterControl.Tests.Automation
 {
-	[TestFixture, Category("MatterControl.UI.Automation"), RunInApplicationDomain]
+	[TestFixture, Category("Agg.UI.Automation"), Apartment(ApartmentState.STA), RunInApplicationDomain]
 	public class ShowTerminalButtonClickedOpensTerminal
 	{
-		[Test, Apartment(ApartmentState.STA)]
+		[Test]
 		public async Task ClickingShowTerminalButtonOpensTerminal()
 		{
-			AutomationTest testToRun = (testRunner) =>
+			await MatterControlUtilities.RunTest((testRunner) =>
 			{
-				testRunner.CloseSignInAndPrinterSelect();
-				testRunner.ClickByName("SettingsAndControls", 5);
-				testRunner.Delay(2);
-				testRunner.ClickByName("Options Tab", 6);
+				testRunner.AddAndSelectPrinter("Airwolf 3D", "HD");
 
-				bool terminalWindowExists1 = testRunner.WaitForName("Gcode Terminal", 0);
-				Assert.IsTrue(terminalWindowExists1 == false, "Terminal Window does not exist");
+				Assert.IsFalse(testRunner.WaitForName("TerminalWidget", 0.5), "Terminal Window should not exist");
 
-				testRunner.ClickByName("Show Terminal Button", 6);
-				testRunner.Delay(1);
+				// when we start up a new session the Terminal Sidebar should not be present
+				Assert.IsFalse(testRunner.WaitForName("Terminal Sidebar", 0.5), "Terminal Sidebar should not exist");
 
-				SystemWindow containingWindow;
-				GuiWidget terminalWindow = testRunner.GetWidgetByName("Gcode Terminal", out containingWindow, 3);
-				Assert.IsTrue(terminalWindow != null, "Terminal Window exists after Show Terminal button is clicked");
-				containingWindow.CloseOnIdle();
-				testRunner.Delay(.5);
+				testRunner.SwitchToTerminalTab();
 
-				return Task.FromResult(0);
-			};
+				Assert.IsTrue(testRunner.WaitForName("TerminalWidget"), "Terminal Window should exists after Show Terminal button is clicked");
 
-			await MatterControlUtilities.RunTest(testToRun);
+				return Task.CompletedTask;
+			});
 		}
-
 	}
 }

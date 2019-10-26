@@ -4,7 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using MatterHackers.Agg;
-using MatterHackers.Agg.PlatformAbstract;
+using MatterHackers.Agg.Platform;
 using MatterHackers.MatterControl.SlicerConfiguration;
 using MatterHackers.MatterControl.Tests.Automation;
 using NUnit.Framework;
@@ -14,12 +14,12 @@ namespace MatterControl.Tests.MatterControl
 	[TestFixture]
 	public class PrinterConfigurationTests
 	{
-		[Test, Category("PrinterConfigurationFiles"), Category("FixNeeded" /* Not Finished/previously ignored */)]
+		[Test, Category("PrinterConfigurationFiles"), Ignore("Not Finished/previously ignored")]
 		public void PrinterConfigTests()
 		{
 			string staticDataPath = TestContext.CurrentContext.ResolveProjectPath(5, "MatterControl", "StaticData");
 
-			StaticData.Instance = new FileSystemStaticData(staticDataPath);
+			AggContext.StaticData = new FileSystemStaticData(staticDataPath);
 
 			var profilesDirectory = new DirectoryInfo(Path.Combine(staticDataPath, "Profiles"));
 
@@ -84,7 +84,7 @@ namespace MatterControl.Tests.MatterControl
 			double firstLayerSpeed;
 			if (firstLayerSpeedString.Contains("%"))
 			{
-				string infillSpeedString = settings.GetValue("infill_speed");
+				string infillSpeedString = settings.GetValue(SettingsKey.infill_speed);
 				double infillSpeed = double.Parse(infillSpeedString);
 
 				firstLayerSpeedString = firstLayerSpeedString.Replace("%", "");
@@ -222,7 +222,7 @@ namespace MatterControl.Tests.MatterControl
 		public void testRetractLengthLessThanTwenty(PrinterSettingsLayer layer, string sourceFile)
 		{
 			string settingValue;
-			if (!layer.TryGetValue("retract_length", out settingValue))
+			if (!layer.TryGetValue(SettingsKey.retract_length, out settingValue))
 			{
 				return;
 			}
@@ -244,7 +244,7 @@ namespace MatterControl.Tests.MatterControl
 		public void minimumFanSpeedLessThanOrEqualToOneHundred(PrinterSettingsLayer layer, string sourceFile)
 		{
 			string settingValue;
-			if (!layer.TryGetValue("min_fan_speed", out settingValue))
+			if (!layer.TryGetValue(SettingsKey.min_fan_speed, out settingValue))
 			{
 				return;
 			}
@@ -255,7 +255,7 @@ namespace MatterControl.Tests.MatterControl
 		public void maxFanSpeedNotGreaterThanOneHundred(PrinterSettingsLayer layer, string sourceFile)
 		{
 			string settingValue;
-			if (!layer.TryGetValue("max_fan_speed", out settingValue))
+			if (!layer.TryGetValue(SettingsKey.max_fan_speed, out settingValue))
 			{
 				return;
 			}
@@ -266,7 +266,7 @@ namespace MatterControl.Tests.MatterControl
 		public void noCurlyBracketsInStartGcode(PrinterSettingsLayer layer, string sourceFile)
 		{
 			string settingValue;
-			if (!layer.TryGetValue("start_gcode", out settingValue))
+			if (!layer.TryGetValue(SettingsKey.start_gcode, out settingValue))
 			{
 				return;
 			}
@@ -277,7 +277,7 @@ namespace MatterControl.Tests.MatterControl
 		public void noCurlyBracketsInEndGcode(PrinterSettingsLayer layer, string sourceFile)
 		{
 			string settingValue;
-			if (!layer.TryGetValue("end_gcode", out settingValue))
+			if (!layer.TryGetValue(SettingsKey.end_gcode, out settingValue))
 			{
 				return;
 			}
@@ -288,7 +288,7 @@ namespace MatterControl.Tests.MatterControl
 		public void testBottomSolidLayersOneMM(PrinterSettingsLayer layer, string sourceFile)
 		{
 			string settingValue;
-			if (!layer.TryGetValue("bottom_solid_layers", out settingValue))
+			if (!layer.TryGetValue(SettingsKey.bottom_solid_layers, out settingValue))
 			{
 				return;
 			}
@@ -299,23 +299,23 @@ namespace MatterControl.Tests.MatterControl
 		public void testFirstLayerTempNotInStartGcode(PrinterSettingsLayer layer, string sourceFile)
 		{
 			string settingValue;
-			if (!layer.TryGetValue("start_gcode", out settingValue))
+			if (!layer.TryGetValue(SettingsKey.start_gcode, out settingValue))
 			{
 				return;
 			}
 
-			Assert.False(settingValue.Contains("first_layer_temperature"), "start_gcode should not contain first_layer_temperature: " + sourceFile);
+			Assert.False(settingValue.Contains(SettingsKey.first_layer_temperature), "start_gcode should not contain first_layer_temperature: " + sourceFile);
 		}
 
 		public void testFirstLayerBedTemperatureNotInStartGcode(PrinterSettingsLayer layer, string sourceFile)
 		{
 			string settingValue;
-			if (!layer.TryGetValue("start_gcode", out settingValue))
+			if (!layer.TryGetValue(SettingsKey.start_gcode, out settingValue))
 			{
 				return;
 			}
 
-			Assert.False(settingValue.Contains("first_layer_bed_temperature"), "start_gcode should not contain first_layer_bed_temperature: " + sourceFile);
+			Assert.False(settingValue.Contains(SettingsKey.first_layer_bed_temperature), "start_gcode should not contain first_layer_bed_temperature: " + sourceFile);
 		}
 	}
 }

@@ -1,64 +1,47 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
-using MatterHackers.Agg.UI;
-using MatterHackers.Agg.UI.Tests;
-using MatterHackers.GuiAutomation;
 using MatterHackers.MatterControl.PartPreviewWindow;
 using NUnit.Framework;
 
 namespace MatterHackers.MatterControl.Tests.Automation
 {
-	[TestFixture, Category("MatterControl.UI.Automation"), RunInApplicationDomain]
+	[TestFixture, Category("MatterControl.UI.Automation"), RunInApplicationDomain, Apartment(ApartmentState.STA)]
 	public class SqLiteLibraryProviderTests
 	{
-		[Test, Apartment(ApartmentState.STA)]
+		[Test]
 		public async Task LibraryQueueViewRefreshesOnAddItem()
 		{
-			AutomationTest testToRun = (testRunner) =>
+			await MatterControlUtilities.RunTest((testRunner) =>
 			{
-				testRunner.CloseSignInAndPrinterSelect();
+				testRunner.OpenEmptyPartTab();
 
-				testRunner.ClickByName("Library Tab", 5);
+				testRunner.AddItemToBedplate();
 
-				testRunner.NavigateToFolder("Local Library Row Item Collection");
-				testRunner.Delay(1);
-				testRunner.ClickByName("Row Item Calibration - Box");
-				testRunner.ClickByName("Row Item Calibration - Box View Button");
-				testRunner.Delay(1);
+				var view3D = testRunner.GetWidgetByName("View3DWidget", out _) as View3DWidget;
+				var scene = view3D.InteractionLayer.Scene;
 
-				SystemWindow systemWindow;
-				GuiWidget partPreview = testRunner.GetWidgetByName("View3DWidget", out systemWindow, 3);
-				View3DWidget view3D = partPreview as View3DWidget;
+				testRunner.WaitFor(() => scene.SelectedItem != null);
+				Assert.IsNotNull(scene.SelectedItem, "Expect part selection after Add to Bed action");
 
-				testRunner.ClickByName("3D View Edit", 3);
+				testRunner.ClickByName("Duplicate Button");
 
-				testRunner.ClickByName("3D View Copy", 3);
 				// wait for the copy to finish
 				testRunner.Delay(.1);
-				testRunner.ClickByName("3D View Remove", 3);
-				testRunner.ClickByName("Save As Menu", 3);
-				testRunner.ClickByName("Save As Menu Item", 3);
+				testRunner.ClickByName("Remove Button");
 
-				testRunner.Delay(1);
+				testRunner.SaveBedplateToFolder("0Test Part", "Local Library Row Item Collection");
 
-				testRunner.Type("0Test Part");
+				// Click Home -> Local Library
+				testRunner.NavigateToLibraryHome();
 				testRunner.NavigateToFolder("Local Library Row Item Collection");
 
-				testRunner.ClickByName("Save As Save Button", 1);
-
-				view3D.CloseOnIdle();
-				testRunner.Delay(.5);
-
 				// ensure that it is now in the library folder (that the folder updated)
-				Assert.IsTrue(testRunner.WaitForName("Row Item 0Test Part", 5), "The part we added should be in the library");
+				Assert.IsTrue(testRunner.WaitForName("Row Item 0Test Part"), "The part we added should be in the library");
 
 				testRunner.Delay(.5);
 
-				return Task.FromResult(0);
-			};
-
-			await MatterControlUtilities.RunTest(testToRun, queueItemFolderToAdd: QueueTemplate.Three_Queue_Items, overrideWidth: 600);
+				return Task.CompletedTask;
+			}, queueItemFolderToAdd: QueueTemplate.Three_Queue_Items, overrideWidth: 1300);
 		}
 	}
 }

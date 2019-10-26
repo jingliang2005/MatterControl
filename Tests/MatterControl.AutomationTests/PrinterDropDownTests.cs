@@ -1,52 +1,56 @@
-﻿using System;
+﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using MatterHackers.Agg.UI;
-using MatterHackers.Agg.UI.Tests;
-using MatterHackers.GuiAutomation;
+using MatterHackers.MatterControl.PartPreviewWindow;
 using MatterHackers.MatterControl.SlicerConfiguration;
 using NUnit.Framework;
 
 namespace MatterHackers.MatterControl.Tests.Automation
 {
-	[TestFixture, Category("MatterControl.UI.Automation"), RunInApplicationDomain]
+	[TestFixture, Category("MatterControl.UI.Automation"), RunInApplicationDomain, Apartment(ApartmentState.STA)]
 	public class PrinterNameChangePersists
 	{
-		[Test, Apartment(ApartmentState.STA)]
-		public async Task PrinterNameStaysChanged()
+		[Test]
+		public async Task PrinterNameChangeTest()
 		{
-			AutomationTest testToRun = (testRunner) =>
+			// Ensures that printer model changes are applied correctly and observed by the view
+			await MatterControlUtilities.RunTest((testRunner) =>
 			{
-				testRunner.CloseSignInAndPrinterSelect();
+				testRunner.WaitForFirstDraw();
 
-				MatterControlUtilities.AddAndSelectPrinter(testRunner, "Airwolf 3D", "HD");
+				testRunner.AddAndSelectPrinter("Airwolf 3D", "HD");
 
-				MatterControlUtilities.SwitchToAdvancedSettings(testRunner);
+				Assert.AreEqual(1, ApplicationController.Instance.ActivePrinters.Count(), "One printer should exist after add");
 
-				testRunner.ClickByName("Printer Tab", 1);
+				testRunner.SwitchToPrinterSettings();
 
-				string widgetName = "Printer Name Edit";
-				testRunner.ClickByName(widgetName);
-
-				SystemWindow window;
-				var textWidget = testRunner.GetWidgetByName(widgetName, out window);
+				// Change the printer name
 				string newName = "Updated name";
-				textWidget.Text = newName;
-				testRunner.ClickByName("Printer Tab", 1);
-				testRunner.Delay(4);
+				testRunner.InlineTitleEdit("Printer Name", newName);
 
-				//Check to make sure the Printer dropdown gets the name change 
-				testRunner.ClickByName("Printers... Menu", 2);
-				testRunner.Delay(1);
-				Assert.IsTrue(testRunner.NameExists(newName + " Menu Item"), "Widget with updated printer name exists");
+				var printer = testRunner.FirstPrinter();
+				string printerID = printer.Settings.ID;
 
-				//Make sure the Active profile name changes as well
-				Assert.IsTrue(ProfileManager.Instance.ActiveProfile.Name == newName, "ActiveProfile has updated name");
+				// Wait for change
+				testRunner.WaitFor(() => newName == ProfileManager.Instance[printerID].Name);
 
-				return Task.FromResult(0);
-			};
+				// Validate that the model reflects the new name
+				Assert.AreEqual(newName, ProfileManager.Instance[printerID].Name, "ActiveProfile has updated name");
 
-			await MatterControlUtilities.RunTest(testToRun);
+				// Validate that the treeview reflects the new name
+				testRunner.SwitchToHardwareTab();
+				Assert.IsTrue(testRunner.WaitForName(newName + " Node"), "Widget with updated printer name exists");
+
+				// Validate that the tab reflects the new name
+				var printerTab = testRunner.GetWidgetByName("3D View Tab", out _) as ChromeTab;
+				Assert.AreEqual(newName, printerTab.Title);
+
+				// Validate that the settings layer reflects the new name
+				Assert.AreEqual(newName, printer.Settings.GetValue(SettingsKey.printer_name));
+
+
+				return Task.CompletedTask;
+			});
 		}
 	}
 }
